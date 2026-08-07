@@ -17,6 +17,23 @@ export const metadata: Metadata = {
   title: "LOOKUP — Tonight's Sky, Honestly",
   description:
     "800,000 alerts per night. The one thing worth seeing from your backyard.",
+  manifest: "/manifest.json",
+  themeColor: "#000000",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "LOOKUP",
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    viewportFit: "cover",
+  },
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
