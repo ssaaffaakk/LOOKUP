@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSettings } from "@/lib/settings-context";
 import { BottomNav } from "./BottomNav";
 
 interface IdentifyResult {
@@ -11,42 +12,53 @@ interface IdentifyResult {
   explanation: string;
 }
 
-const mockResults: IdentifyResult[] = [
-  {
-    confidence: 94,
-    name: "Starlink Group 15-2",
-    type: "Satellite train",
-    explanation:
-      "A Starlink batch launched Tuesday passed over Ankara at 21:43, moving NW to SE. Matches your description: steady light, no blinking, ~4 minute duration. This was 22 satellites in a low-altitude train before they raise orbits and spread out.",
-  },
-  {
-    confidence: 4,
-    name: "ISS",
-    type: "Space station",
-    explanation:
-      "The ISS was below the horizon from Ankara at that time. Unlikely match.",
-  },
-  {
-    confidence: 2,
-    name: "Aircraft",
-    type: "Aviation",
-    explanation:
-      "Aircraft typically blink (red/green navigation lights). Your description of a steady, non-blinking light makes this unlikely.",
-  },
-];
-
 const PLACEHOLDER_TEXT =
   "Around 9:45pm, I saw a bright steady light moving from northwest to southeast. It lasted about 4 minutes, did not blink, and was brighter than any star.";
 
 export function IdentifyView() {
+  const { settings } = useSettings();
   const [description, setDescription] = useState("");
+  const [results, setResults] = useState<IdentifyResult[]>([]);
+  const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [source, setSource] = useState<string>("");
 
-  const handleSubmit = () => {
-    if (description.trim().length > 10) {
+  const handleSubmit = useCallback(async () => {
+    if (description.trim().length <= 10) return;
+
+    setLoading(true);
+    try {
+      const now = new Date();
+      const res = await fetch("/api/identify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description,
+          lat: settings.location?.lat ?? 39.93,
+          lng: settings.location?.lng ?? 32.86,
+          localTime: now.toLocaleTimeString("en-US", { hour12: false }),
+        }),
+      });
+
+      const data = await res.json();
+      setResults(data.results ?? []);
+      setSource(data.source ?? "");
       setShowResults(true);
+    } catch {
+      setResults([
+        {
+          confidence: 50,
+          name: "Unable to identify",
+          type: "Error",
+          explanation:
+            "Could not reach the identification service. Try again in a moment.",
+        },
+      ]);
+      setShowResults(true);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [description, settings.location]);
 
   return (
     <div className="min-h-screen bg-black pb-20">
@@ -92,13 +104,24 @@ export function IdentifyView() {
                 </div>
 
                 <motion.button
-                  className="w-full py-3.5 rounded-2xl bg-accent text-white text-[15px] font-semibold tracking-[-0.01em] disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="w-full py-3.5 rounded-2xl bg-accent text-white text-[15px] font-semibold tracking-[-0.01em] disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   onClick={handleSubmit}
-                  disabled={description.trim().length <= 10}
+                  disabled={description.trim().length <= 10 || loading}
                   whileTap={{ scale: 0.97 }}
                   transition={{ type: "spring", bounce: 0, duration: 0.15 }}
                 >
-                  Identify
+                  {loading ? (
+                    <>
+                      <motion.div
+                        className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full"
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      />
+                      Identifying...
+                    </>
+                  ) : (
+                    "Identify"
+                  )}
                 </motion.button>
               </div>
 
@@ -132,13 +155,21 @@ export function IdentifyView() {
               transition={{ type: "spring", bounce: 0, duration: 0.4 }}
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-[13px] uppercase tracking-[0.08em] text-text-tertiary font-medium">
-                  Best matches
-                </h2>
+                <div>
+                  <h2 className="text-[13px] uppercase tracking-[0.08em] text-text-tertiary font-medium">
+                    Best matches
+                  </h2>
+                  {source && (
+                    <p className="text-[11px] text-text-tertiary mt-0.5">
+                      Powered by {source === "watsonx" ? "IBM watsonx" : "pattern matching"}
+                    </p>
+                  )}
+                </div>
                 <button
                   onClick={() => {
                     setShowResults(false);
                     setDescription("");
+                    setResults([]);
                   }}
                   className="text-[13px] text-accent font-medium"
                 >
@@ -147,7 +178,7 @@ export function IdentifyView() {
               </div>
 
               <div className="space-y-3">
-                {mockResults.map((result, i) => (
+                {results.map((result, i) => (
                   <motion.div
                     key={result.name}
                     className="rounded-[20px] glass border border-border p-5"
