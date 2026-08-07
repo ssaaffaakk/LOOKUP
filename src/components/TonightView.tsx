@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { tonightGo, tonightSkip } from "@/lib/mock-data";
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import type { TonightData } from "@/lib/types";
 import { useSettings } from "@/lib/settings-context";
 import { Verdict } from "./Verdict";
 import { ConditionsStrip } from "./ConditionsStrip";
@@ -13,13 +13,87 @@ import { SettingsSheet } from "./SettingsSheet";
 
 export function TonightView() {
   const { settings } = useSettings();
-  const [scenario, setScenario] = useState<"go" | "skip">("go");
+  const [data, setData] = useState<TonightData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const baseData = scenario === "go" ? tonightGo : tonightSkip;
-  const data = {
-    ...baseData,
-    location: settings.location ?? baseData.location,
-  };
+
+  const fetchData = useCallback(async () => {
+    if (!settings.location) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/tonight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lat: settings.location.lat,
+          lng: settings.location.lng,
+          equipment: settings.equipment,
+          locationName: settings.location.name,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch sky data");
+      const result: TonightData = await res.json();
+      setData(result);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }, [settings.location, settings.equipment]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center pb-24">
+        <motion.div
+          className="text-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <motion.div
+            className="w-8 h-8 rounded-full border-2 border-text-tertiary border-t-white mx-auto mb-4"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          />
+          <p className="text-[15px] text-text-secondary">
+            Computing your sky...
+          </p>
+          <p className="text-[13px] text-text-tertiary mt-1">
+            Calculating planet positions, checking weather
+          </p>
+        </motion.div>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center pb-24">
+        <div className="text-center px-6">
+          <p className="text-[17px] text-text-primary mb-2">
+            Could not load sky data
+          </p>
+          <p className="text-[14px] text-text-secondary mb-6">{error}</p>
+          <button
+            onClick={fetchData}
+            className="px-5 py-2.5 rounded-full bg-white/10 text-[14px] font-medium text-text-primary active:scale-95 transition-transform duration-100"
+          >
+            Try again
+          </button>
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black pb-24">
@@ -116,6 +190,11 @@ export function TonightView() {
             {data.objects.map((obj, i) => (
               <ObjectCard key={obj.id} object={obj} index={i} equipment={settings.equipment} />
             ))}
+            {data.objects.length === 0 && (
+              <p className="text-[14px] text-text-tertiary text-center py-8">
+                No objects visible with your equipment right now.
+              </p>
+            )}
           </div>
         </section>
 
@@ -137,16 +216,6 @@ export function TonightView() {
             </div>
           </section>
         )}
-      </div>
-
-      {/* Scenario toggle — demo only */}
-      <div className="fixed bottom-16 right-4 z-50">
-        <button
-          onClick={() => setScenario(scenario === "go" ? "skip" : "go")}
-          className="px-3 py-1.5 rounded-full glass-elevated border border-border-strong text-[11px] font-medium text-text-secondary active:scale-95 transition-transform duration-100"
-        >
-          Demo: {scenario === "go" ? "Show skip" : "Show go"}
-        </button>
       </div>
 
       <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
