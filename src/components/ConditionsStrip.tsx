@@ -110,12 +110,25 @@ export function ConditionsStrip({ conditions }: ConditionsStripProps) {
   ];
 
   return (
-    <section className="px-4">
+    <section className="px-4 space-y-3">
       <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none md:justify-center">
         {pills.map((pill, i) => (
           <ConditionPill key={pill.label} {...pill} index={i} />
         ))}
       </div>
+
+      <motion.div
+        className="flex items-center justify-center gap-4 text-[12px] text-text-tertiary"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.7 }}
+      >
+        <span>Sunset {conditions.sunset}</span>
+        <span className="text-text-tertiary/50">|</span>
+        <span>Dark by {conditions.astronomicalTwilight}</span>
+        <span className="text-text-tertiary/50">|</span>
+        <span>Sunrise {conditions.sunrise}</span>
+      </motion.div>
     </section>
   );
 }

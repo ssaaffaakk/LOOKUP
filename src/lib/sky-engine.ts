@@ -342,27 +342,29 @@ export function computeMoonAndSun(
 export async function fetchWeather(
   lat: number,
   lng: number,
-): Promise<{ cloudCover: number; temperature: number; humidity: number; seeing: number }> {
-  const apiKey = process.env.OPENWEATHER_API_KEY;
-  if (!apiKey) {
-    return { cloudCover: 20, temperature: 22, humidity: 40, seeing: 6 };
-  }
-
+): Promise<{ cloudCover: number; temperature: number; humidity: number; seeing: number; windSpeed: number }> {
   try {
     const res = await fetch(
-      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${apiKey}&units=metric`,
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=cloud_cover,temperature_2m,relative_humidity_2m,wind_speed_10m`,
     );
     if (!res.ok) throw new Error("Weather API failed");
     const data = await res.json();
 
-    const clouds = data.clouds?.all ?? 20;
-    const temp = Math.round(data.main?.temp ?? 22);
-    const humid = data.main?.humidity ?? 40;
-    const seeing = clouds < 20 && humid < 60 ? 7 : clouds < 50 ? 5 : 3;
+    const clouds = data.current?.cloud_cover ?? 20;
+    const temp = Math.round(data.current?.temperature_2m ?? 22);
+    const humid = data.current?.relative_humidity_2m ?? 40;
+    const wind = data.current?.wind_speed_10m ?? 5;
 
-    return { cloudCover: clouds, temperature: temp, humidity: humid, seeing };
+    let seeing = 7;
+    if (clouds > 60) seeing = 3;
+    else if (clouds > 30) seeing = 5;
+    else if (humid > 80) seeing = 4;
+    else if (wind > 30) seeing = 4;
+    else if (humid < 50 && wind < 15) seeing = 8;
+
+    return { cloudCover: clouds, temperature: temp, humidity: humid, seeing, windSpeed: wind };
   } catch {
-    return { cloudCover: 20, temperature: 22, humidity: 40, seeing: 6 };
+    return { cloudCover: 20, temperature: 22, humidity: 40, seeing: 6, windSpeed: 5 };
   }
 }
 
@@ -523,103 +525,29 @@ export async function fetchISS(
   }
 }
 
-export async function fetchTransients(): Promise<CelestialObject[]> {
+async function fetchALeRCE(
+  lat: number,
+  lng: number,
+): Promise<CelestialObject[]> {
   try {
     const res = await fetch(
-      "https://www.wis-tns.org/api/get/search",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": "tns_marker{\"tns_id\":\"LOOKUP\",\"type\":\"bot\",\"name\":\"LOOKUP\"}",
-        },
-        body: new URLSearchParams({
-          api_key: process.env.TNS_API_KEY ?? "",
-          data: JSON.stringify({
-            discovered_period_value: "30",
-            discovered_period_units: "days",
-            unclassified_at: "0",
-            classified_sne: "1",
-            include_frb: "0",
-            name: "",
-            name_like: "0",
-            isTNS_AT: "yes",
-            public: "1",
-            ra: "",
-            decl: "",
-            radius: "",
-            coords_unit: "arcsec",
-            reporting_groupid: [],
-            groupid: [],
-            classifier_groupid: [],
-            objtype: [],
-            at_type: "",
-            date_start: [{ value: "" }],
-            date_end: [{ value: "" }],
-            discovery_mag_min: "",
-            discovery_mag_max: "16",
-            internal_name: "",
-            discoverer: "",
-            classifier: "",
-            spectra_count: "",
-            redshift_min: "",
-            redshift_max: "",
-            hostname: "",
-            ext_catid: "",
-            ra_range_min: "",
-            ra_range_max: "",
-            decl_range_min: "",
-            decl_range_max: "",
-            discovery_instrument: [],
-            classification_instrument: [],
-            associated_groups: [],
-            official_discovery: "0",
-            official_classification: "0",
-            at_rep_remarks: "",
-            class_rep_remarks: "",
-            frb_repeat: "",
-            frb_repeater_of_objid: "",
-            frb_measured_redshift: "0",
-            frb_dm_range_min: "",
-            frb_dm_range_max: "",
-            frb_rm_range_min: "",
-            frb_rm_range_max: "",
-            frb_snr_range_min: "",
-            frb_snr_range_max: "",
-            frb_flux_range_min: "",
-            frb_flux_range_max: "",
-            num_page: "10",
-            display: [{ value: "0" }],
-          }),
-        }),
-      },
+      "https://api.alerce.online/ztf/v1/objects/?classifier=stamp_classifier&class=SN&probability=0.5&page_size=10&order_by=firstmjd&order_mode=DESC",
     );
     if (!res.ok) return [];
-
     const data = await res.json();
-    if (!data.data?.reply) return [];
+    if (!data.items || !Array.isArray(data.items)) return [];
 
-    const transients: CelestialObject[] = [];
-    for (const item of data.data.reply) {
-      const mag = parseFloat(item.discovmag ?? "99");
-      if (mag > 16 || isNaN(mag)) continue;
+    const observer = new Astronomy.Observer(lat, lng, 0);
+    const now = new Date();
+    const results: CelestialObject[] = [];
 
-      const raStr = item.ra ?? "";
-      const decStr = item.declination ?? "";
-      if (!raStr || !decStr) continue;
+    for (const item of data.items) {
+      const raDeg = item.meanra ?? 0;
+      const decDeg = item.meandec ?? 0;
+      if (raDeg === 0 && decDeg === 0) continue;
 
-      const raParts = raStr.split(":");
-      const raHours = raParts.length === 3
-        ? parseFloat(raParts[0]) + parseFloat(raParts[1]) / 60 + parseFloat(raParts[2]) / 3600
-        : parseFloat(raStr) / 15;
-
-      const decParts = decStr.split(":");
-      const decDeg = decParts.length === 3
-        ? (decStr.startsWith("-") ? -1 : 1) *
-          (Math.abs(parseFloat(decParts[0])) + parseFloat(decParts[1]) / 60 + parseFloat(decParts[2]) / 3600)
-        : parseFloat(decStr);
-
-      if (isNaN(raHours) || isNaN(decDeg)) continue;
+      const raHours = raDeg / 15;
+      const horizon = Astronomy.Horizon(makeDate(now), observer, raHours, decDeg, "normal");
 
       let constellationName = "Unknown";
       try {
@@ -627,41 +555,120 @@ export async function fetchTransients(): Promise<CelestialObject[]> {
         constellationName = constel.name;
       } catch {}
 
-      const name = item.prefix && item.objname
-        ? `${item.prefix} ${item.objname}`
-        : item.objname ?? "Unknown transient";
+      const prob = item.probability ?? 0.5;
+      const oid = item.oid ?? "unknown";
 
-      const objType = (item.type ?? "").toLowerCase();
-      let type: "supernova" | "nova" = "supernova";
-      if (objType.includes("nova") && !objType.includes("supernova")) type = "nova";
+      results.push({
+        id: `alerce-${oid}`,
+        name: `SN candidate ${oid}`,
+        type: "supernova",
+        rarity: prob > 0.8 ? "rare" as const : "notable" as const,
+        magnitude: 16,
+        constellation: constellationName,
+        altitude: Math.round(horizon.altitude),
+        azimuth: Math.round(horizon.azimuth),
+        bestTime: horizon.altitude > 0
+          ? now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+          : "below horizon",
+        minimumAperture: "8-inch telescope",
+        whatYoullSee: `A faint point in ${constellationName}. Classified as a supernova candidate with ${Math.round(prob * 100)}% confidence by machine learning.`,
+        whyItMatters: `Real alert from ALeRCE broker processing ZTF sky survey data. ${prob > 0.7 ? "High-confidence supernova candidate — a star that exploded in a distant galaxy." : "Under investigation by automated classifiers."}`,
+        rarityExplanation: "Flagged by ALeRCE machine learning classifiers scanning millions of sources nightly.",
+        isTransient: true,
+        daysLeft: 30,
+      });
+    }
 
-      const discovDate = item.discoverydate ? new Date(item.discoverydate) : null;
+    return results.filter((t) => t.altitude > -10).slice(0, 3);
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchTransients(
+  lat: number,
+  lng: number,
+): Promise<CelestialObject[]> {
+  try {
+    const res = await fetch(
+      "https://fink-portal.org/api/v1/latests?class=SN%20candidate&n=20&columns=i:objectId,i:ra,i:dec,i:magpsf,d:rf_snia_vs_nonia,i:jdstarthist&output-format=json",
+    );
+    if (!res.ok) {
+      return fetchALeRCE(lat, lng);
+    }
+
+    const alerts = await res.json();
+    if (!Array.isArray(alerts) || alerts.length === 0) return [];
+
+    const observer = new Astronomy.Observer(lat, lng, 0);
+    const now = new Date();
+    const transients: CelestialObject[] = [];
+
+    for (const alert of alerts) {
+      const mag = parseFloat(alert["i:magpsf"] ?? "99");
+      if (mag > 18 || isNaN(mag)) continue;
+
+      const raDeg = parseFloat(alert["i:ra"] ?? "0");
+      const decDeg = parseFloat(alert["i:dec"] ?? "0");
+      if (raDeg === 0 && decDeg === 0) continue;
+
+      const raHours = raDeg / 15;
+      const horizon = Astronomy.Horizon(makeDate(now), observer, raHours, decDeg, "normal");
+
+      let constellationName = "Unknown";
+      try {
+        const constel = Astronomy.Constellation(raHours, decDeg);
+        constellationName = constel.name;
+      } catch {}
+
+      const snia = parseFloat(alert["d:rf_snia_vs_nonia"] ?? "0");
+      const objectId = alert["i:objectId"] ?? "unknown";
+
+      const jdStart = parseFloat(alert["i:jdstarthist"] ?? "0");
+      const discovDate = jdStart > 0 ? new Date((jdStart - 2440587.5) * 86400000) : null;
       const daysLeft = discovDate
-        ? Math.max(1, Math.ceil((discovDate.getTime() + 120 * 86400000 - Date.now()) / 86400000))
-        : undefined;
+        ? Math.max(1, Math.ceil((discovDate.getTime() + 90 * 86400000 - Date.now()) / 86400000))
+        : 30;
+
+      const bestTime = horizon.altitude > 0
+        ? now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+        : "below horizon";
+
+      const rarity = snia > 0.8 ? "rare" as const : mag < 15 ? "notable" as const : "common" as const;
 
       transients.push({
-        id: `tns-${item.objname ?? Math.random().toString(36).slice(2)}`,
-        name,
-        type,
-        rarity: mag < 12 ? "rare" : "notable",
+        id: `fink-${objectId}`,
+        name: snia > 0.5 ? `SN candidate ${objectId}` : `Transient ${objectId}`,
+        type: "supernova",
+        rarity,
         magnitude: Math.round(mag * 10) / 10,
         constellation: constellationName,
-        altitude: 0,
-        azimuth: 0,
-        bestTime: "check chart",
-        minimumAperture: mag < 6 ? "Naked eye" : mag < 10 ? "Binoculars" : `${Math.ceil(mag / 2)}-inch telescope`,
-        whatYoullSee: `A point of light at magnitude ${mag.toFixed(1)} in ${constellationName}. ${type === "supernova" ? "A star that exploded in another galaxy." : "A stellar explosion that will fade over weeks."}`,
-        whyItMatters: `Real transient discovered by the astronomical community. ${type === "supernova" ? "Supernovae this bright are rare — a few per year at most." : "A genuine astronomical event happening right now."}`,
-        rarityExplanation: `Discovered recently and fading. ${mag < 12 ? "Bright enough for amateur equipment." : "Requires a telescope."}`,
+        altitude: Math.round(horizon.altitude),
+        azimuth: Math.round(horizon.azimuth),
+        bestTime,
+        minimumAperture: mag < 10 ? "Binoculars" : mag < 14 ? "6-inch telescope" : "8-inch telescope",
+        whatYoullSee: `A faint point at magnitude ${mag.toFixed(1)} in ${constellationName}. ${snia > 0.5 ? "Likely a Type Ia supernova — a white dwarf that detonated." : "A transient event detected by automated sky surveys."}`,
+        whyItMatters: `Real alert from the Fink broker processing ZTF sky survey data. ${snia > 0.5 ? `${Math.round(snia * 100)}% probability of being a Type Ia supernova — the kind used to measure the expansion of the universe.` : "Automated classification is still working on this one."}`,
+        rarityExplanation: snia > 0.5
+          ? "Genuine supernova candidates are rare. This was flagged by machine learning classifiers."
+          : "Detected by automated sky surveys scanning millions of sources nightly.",
         isTransient: true,
         daysLeft,
       });
     }
 
-    return transients.slice(0, 3);
+    const filtered = transients
+      .filter((t) => t.altitude > -10)
+      .sort((a, b) => a.magnitude - b.magnitude)
+      .slice(0, 3);
+
+    if (filtered.length === 0) {
+      return fetchALeRCE(lat, lng);
+    }
+
+    return filtered;
   } catch {
-    return [];
+    return fetchALeRCE(lat, lng);
   }
 }
 
@@ -677,7 +684,7 @@ export async function buildTonightData(
     fetchWeather(lat, lng),
     Promise.resolve(computeMoonAndSun(lat, lng, now)),
     fetchISS(lat, lng),
-    fetchTransients(),
+    fetchTransients(lat, lng),
   ]);
 
   const bortle = estimateBortle(lat, lng);
