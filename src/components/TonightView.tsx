@@ -9,10 +9,12 @@ import { ConditionsStrip } from "./ConditionsStrip";
 import { ObjectCard } from "./ObjectCard";
 import { UpcomingCard } from "./UpcomingCard";
 import { BottomNav } from "./BottomNav";
+import { SettingsSheet } from "./SettingsSheet";
 
 export function TonightView() {
   const { settings } = useSettings();
   const [scenario, setScenario] = useState<"go" | "skip">("go");
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const baseData = scenario === "go" ? tonightGo : tonightSkip;
   const data = {
     ...baseData,
@@ -21,7 +23,6 @@ export function TonightView() {
 
   return (
     <div className="min-h-screen bg-black pb-24">
-      {/* Header */}
       <motion.header
         className="fixed top-0 inset-x-0 z-50 glass border-b border-border pt-[env(safe-area-inset-top)]"
         initial={{ opacity: 0, y: -10 }}
@@ -49,14 +50,38 @@ export function TonightView() {
               {data.location.name}
             </span>
           </div>
-          <span className="text-[13px] text-text-tertiary tabular-nums">
-            {data.date}
-          </span>
+
+          <div className="flex items-center gap-3">
+            <span className="text-[13px] text-text-tertiary tabular-nums">
+              {data.date}
+            </span>
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/[0.06] transition-colors active:scale-90 transition-transform duration-100"
+              aria-label="Settings"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                className="text-text-secondary"
+              >
+                <path
+                  d="M6.5 1.5H9.5L10 3.5L11.5 4.3L13.5 3.5L15 5.5L13.5 7L14 8.5V9.5L13.5 11L15 12.5L13.5 14.5L11.5 13.7L10 14.5L9.5 16.5H6.5L6 14.5L4.5 13.7L2.5 14.5L1 12.5L2.5 11L2 9.5V8.5L2.5 7L1 5.5L2.5 3.5L4.5 4.3L6 3.5L6.5 1.5Z"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+                <circle cx="8" cy="9" r="2" stroke="currentColor" strokeWidth="1.2" fill="none" />
+              </svg>
+            </button>
+          </div>
         </div>
       </motion.header>
 
       <div className="max-w-2xl mx-auto">
-        {/* Verdict */}
         <Verdict
           verdict={data.verdict}
           reason={data.verdictReason}
@@ -68,10 +93,8 @@ export function TonightView() {
           }
         />
 
-        {/* Conditions */}
         <ConditionsStrip conditions={data.conditions} />
 
-        {/* Objects */}
         <section className="px-4 mt-8">
           <motion.div
             className="flex items-baseline justify-between mb-4"
@@ -96,7 +119,6 @@ export function TonightView() {
           </div>
         </section>
 
-        {/* Upcoming */}
         {data.upcoming.length > 0 && (
           <section className="px-4 mt-10 mb-8">
             <motion.h2
@@ -127,6 +149,7 @@ export function TonightView() {
         </button>
       </div>
 
+      <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <BottomNav />
     </div>
   );
