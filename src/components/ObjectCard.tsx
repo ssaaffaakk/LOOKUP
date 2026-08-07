@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { CelestialObject } from "@/lib/types";
+import type { CelestialObject, Equipment } from "@/lib/types";
+import { equipmentVerdict } from "@/lib/equipment";
 import { RarityBadge } from "./RarityBadge";
 
 const typeLabels: Record<string, string> = {
@@ -20,10 +21,12 @@ const typeLabels: Record<string, string> = {
 interface ObjectCardProps {
   object: CelestialObject;
   index: number;
+  equipment?: Equipment;
 }
 
-export function ObjectCard({ object, index }: ObjectCardProps) {
+export function ObjectCard({ object, index, equipment }: ObjectCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const eqVerdict = equipment ? equipmentVerdict(object.minimumAperture, equipment) : null;
 
   return (
     <motion.button
@@ -71,12 +74,32 @@ export function ObjectCard({ object, index }: ObjectCardProps) {
         </div>
       </div>
 
-      <div className="mt-3 flex items-center gap-1.5 text-[13px] text-text-tertiary">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0">
-          <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1" />
-          <path d="M7 3.5V7.5H10" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
-        </svg>
-        <span>{object.minimumAperture}</span>
+      <div className={`mt-3 flex items-center gap-1.5 text-[13px] ${
+        eqVerdict
+          ? eqVerdict.canSee
+            ? "text-[#30d158]"
+            : "text-[#ff9f0a]"
+          : "text-text-tertiary"
+      }`}>
+        {eqVerdict ? (
+          eqVerdict.canSee ? (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0">
+              <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1" />
+              <path d="M4.5 7L6.5 9L10 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0">
+              <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1" />
+              <path d="M5 5L9 9M9 5L5 9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+            </svg>
+          )
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0">
+            <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1" />
+            <path d="M7 3.5V7.5H10" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+          </svg>
+        )}
+        <span>{eqVerdict ? eqVerdict.message : object.minimumAperture}</span>
       </div>
 
       <AnimatePresence>

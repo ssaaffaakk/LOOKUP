@@ -114,7 +114,7 @@ export function TonightView() {
 
           <div className="space-y-3">
             {data.objects.map((obj, i) => (
-              <ObjectCard key={obj.id} object={obj} index={i} />
+              <ObjectCard key={obj.id} object={obj} index={i} equipment={settings.equipment} />
             ))}
           </div>
         </section>

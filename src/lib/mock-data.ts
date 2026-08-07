@@ -1,8 +1,16 @@
 import { TonightData } from "./types";
 
+function todayFormatted(): string {
+  return new Date().toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 export const tonightGo: TonightData = {
   location: { name: "Ankara, Turkey", lat: 39.9334, lng: 32.8597 },
-  date: "7 August 2026",
+  date: todayFormatted(),
   localTime: "21:34",
   verdict: "go",
   verdictReason: "SN 2026sqf is visible tonight.",
@@ -41,7 +49,7 @@ export const tonightGo: TonightData = {
       rarityExplanation:
         "One amateur-visible supernova per year on average. Last comparable: SN 2023ixf in M101.",
       isTransient: true,
-      daysLeft: 38,
+      daysLeft: Math.max(1, Math.ceil((new Date("2026-09-14").getTime() - Date.now()) / 86400000)),
     },
     {
       id: "saturn",
@@ -140,7 +148,7 @@ export const tonightGo: TonightData = {
 
 export const tonightSkip: TonightData = {
   location: { name: "Ankara, Turkey", lat: 39.9334, lng: 32.8597 },
-  date: "9 August 2026",
+  date: todayFormatted(),
   localTime: "21:15",
   verdict: "skip",
   verdictReason: "Not worth it tonight.",
