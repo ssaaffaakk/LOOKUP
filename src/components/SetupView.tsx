@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useSettings } from "@/lib/settings-context";
+import { SplashScreen } from "./SplashScreen";
 import type { Equipment, ExperienceLevel } from "@/lib/types";
 
 const SPRING = { type: "spring" as const, bounce: 0, duration: 0.5 };
@@ -98,6 +99,7 @@ function LocationStep({
 export function SetupView() {
   const router = useRouter();
   const { settings, setEquipment, setExperienceLevel, setLocation, completeSetup } = useSettings();
+  const [showSplash, setShowSplash] = useState(!settings.setupComplete);
   const [step, setStep] = useState(0);
   const [detecting, setDetecting] = useState(false);
   const [locError, setLocError] = useState<string | null>(null);
@@ -232,6 +234,10 @@ export function SetupView() {
       error={locError}
     />,
   ];
+
+  if (showSplash) {
+    return <SplashScreen onContinue={() => setShowSplash(false)} />;
+  }
 
   return (
     <div className="min-h-screen bg-black flex flex-col">
