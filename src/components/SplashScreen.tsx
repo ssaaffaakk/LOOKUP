@@ -101,7 +101,7 @@ export function SplashScreen({ onContinue }: SplashScreenProps) {
               animate={{ opacity: 1 }}
               transition={{ delay: 1 }}
             >
-              Powered by Vera Rubin Observatory alert stream
+              Powered by Fink &amp; ALeRCE alert brokers + IBM watsonx
             </motion.p>
           </motion.div>
         </motion.div>
