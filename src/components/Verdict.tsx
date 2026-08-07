@@ -35,7 +35,7 @@ export function Verdict({ verdict, reason, detail, nextWorthIt }: VerdictProps) 
   const config = verdictConfig[verdict];
 
   return (
-    <section className="relative flex flex-col items-center justify-center px-6 pt-24 pb-12 min-h-[70vh]">
+    <section className="relative flex flex-col items-center justify-center px-6 pt-24 pb-12 min-h-[50svh] md:min-h-[35vh]">
       <div
         className="absolute inset-0 pointer-events-none"
         style={{

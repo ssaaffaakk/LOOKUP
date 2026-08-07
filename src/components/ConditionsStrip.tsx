@@ -111,7 +111,7 @@ export function ConditionsStrip({ conditions }: ConditionsStripProps) {
 
   return (
     <section className="px-4">
-      <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none md:justify-center">
         {pills.map((pill, i) => (
           <ConditionPill key={pill.label} {...pill} index={i} />
         ))}

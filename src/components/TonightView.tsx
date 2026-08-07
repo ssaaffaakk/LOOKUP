@@ -14,7 +14,7 @@ export function TonightView() {
   const data = scenario === "go" ? tonightGo : tonightSkip;
 
   return (
-    <div className="min-h-screen bg-black pb-20">
+    <div className="min-h-screen bg-black pb-24">
       {/* Header */}
       <motion.header
         className="fixed top-0 inset-x-0 z-50 glass border-b border-border pt-[env(safe-area-inset-top)]"
@@ -22,7 +22,7 @@ export function TonightView() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: "spring", bounce: 0, duration: 0.4 }}
       >
-        <div className="flex items-center justify-between h-11 px-5 max-w-lg mx-auto">
+        <div className="flex items-center justify-between h-11 px-5 max-w-2xl mx-auto">
           <div className="flex items-center gap-2">
             <svg
               width="14"
@@ -49,65 +49,67 @@ export function TonightView() {
         </div>
       </motion.header>
 
-      {/* Verdict */}
-      <Verdict
-        verdict={data.verdict}
-        reason={data.verdictReason}
-        detail={data.verdictDetail}
-        nextWorthIt={
-          data.verdict === "skip"
-            ? `${data.upcoming[0]?.date} — ${data.upcoming[0]?.name}`
-            : undefined
-        }
-      />
+      <div className="max-w-2xl mx-auto">
+        {/* Verdict */}
+        <Verdict
+          verdict={data.verdict}
+          reason={data.verdictReason}
+          detail={data.verdictDetail}
+          nextWorthIt={
+            data.verdict === "skip"
+              ? `${data.upcoming[0]?.date} — ${data.upcoming[0]?.name}`
+              : undefined
+          }
+        />
 
-      {/* Conditions */}
-      <ConditionsStrip conditions={data.conditions} />
+        {/* Conditions */}
+        <ConditionsStrip conditions={data.conditions} />
 
-      {/* Objects */}
-      <section className="px-4 mt-8">
-        <motion.div
-          className="flex items-baseline justify-between mb-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-        >
-          <h2 className="text-[13px] uppercase tracking-[0.08em] text-text-tertiary font-medium">
-            {data.verdict === "skip"
-              ? "Technically visible"
-              : "Visible tonight"}
-          </h2>
-          <span className="text-[13px] text-text-tertiary">
-            Sorted by rarity
-          </span>
-        </motion.div>
-
-        <div className="space-y-3">
-          {data.objects.map((obj, i) => (
-            <ObjectCard key={obj.id} object={obj} index={i} />
-          ))}
-        </div>
-      </section>
-
-      {/* Upcoming */}
-      {data.upcoming.length > 0 && (
-        <section className="px-4 mt-10">
-          <motion.h2
-            className="text-[13px] uppercase tracking-[0.08em] text-text-tertiary font-medium mb-4"
+        {/* Objects */}
+        <section className="px-4 mt-8">
+          <motion.div
+            className="flex items-baseline justify-between mb-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.75 }}
+            transition={{ delay: 0.5 }}
           >
-            Worth planning for
-          </motion.h2>
+            <h2 className="text-[13px] uppercase tracking-[0.08em] text-text-tertiary font-medium">
+              {data.verdict === "skip"
+                ? "Technically visible"
+                : "Visible tonight"}
+            </h2>
+            <span className="text-[13px] text-text-tertiary">
+              Sorted by rarity
+            </span>
+          </motion.div>
 
           <div className="space-y-3">
-            {data.upcoming.map((event, i) => (
-              <UpcomingCard key={event.name} event={event} index={i} />
+            {data.objects.map((obj, i) => (
+              <ObjectCard key={obj.id} object={obj} index={i} />
             ))}
           </div>
         </section>
-      )}
+
+        {/* Upcoming */}
+        {data.upcoming.length > 0 && (
+          <section className="px-4 mt-10 mb-8">
+            <motion.h2
+              className="text-[13px] uppercase tracking-[0.08em] text-text-tertiary font-medium mb-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.75 }}
+            >
+              Worth planning for
+            </motion.h2>
+
+            <div className="space-y-3">
+              {data.upcoming.map((event, i) => (
+                <UpcomingCard key={event.name} event={event} index={i} />
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
 
       {/* Scenario toggle — demo only */}
       <div className="fixed bottom-16 right-4 z-50">

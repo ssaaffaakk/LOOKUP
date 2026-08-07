@@ -35,6 +35,9 @@ const mockResults: IdentifyResult[] = [
   },
 ];
 
+const PLACEHOLDER_TEXT =
+  "Around 9:45pm, I saw a bright steady light moving from northwest to southeast. It lasted about 4 minutes, did not blink, and was brighter than any star.";
+
 export function IdentifyView() {
   const [description, setDescription] = useState("");
   const [showResults, setShowResults] = useState(false);
@@ -82,7 +85,7 @@ export function IdentifyView() {
                   </label>
                   <textarea
                     className="w-full h-32 px-4 py-3 rounded-2xl bg-white/[0.06] border border-border text-[15px] text-text-primary placeholder:text-text-tertiary resize-none focus:outline-none focus:border-accent/50 transition-colors duration-150"
-                    placeholder={"Around 9:45pm, I saw a bright steady light moving from northwest to southeast. It lasted about 4 minutes, didn't blink, and was brighter than any star."}
+                    placeholder={PLACEHOLDER_TEXT}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                   />
