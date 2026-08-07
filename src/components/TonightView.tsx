@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { tonightGo, tonightSkip } from "@/lib/mock-data";
+import { useSettings } from "@/lib/settings-context";
 import { Verdict } from "./Verdict";
 import { ConditionsStrip } from "./ConditionsStrip";
 import { ObjectCard } from "./ObjectCard";
@@ -10,8 +11,13 @@ import { UpcomingCard } from "./UpcomingCard";
 import { BottomNav } from "./BottomNav";
 
 export function TonightView() {
+  const { settings } = useSettings();
   const [scenario, setScenario] = useState<"go" | "skip">("go");
-  const data = scenario === "go" ? tonightGo : tonightSkip;
+  const baseData = scenario === "go" ? tonightGo : tonightSkip;
+  const data = {
+    ...baseData,
+    location: settings.location ?? baseData.location,
+  };
 
   return (
     <div className="min-h-screen bg-black pb-24">

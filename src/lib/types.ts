@@ -74,3 +74,18 @@ export interface TonightData {
   objects: CelestialObject[];
   upcoming: UpcomingEvent[];
 }
+
+export type Equipment = "naked-eye" | "binoculars" | "small-scope" | "medium-scope" | "large-scope";
+
+export type ExperienceLevel = "beginner" | "intermediate" | "experienced";
+
+export interface UserSettings {
+  equipment: Equipment;
+  experienceLevel: ExperienceLevel;
+  location: {
+    name: string;
+    lat: number;
+    lng: number;
+  } | null;
+  setupComplete: boolean;
+}
